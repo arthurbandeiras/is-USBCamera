@@ -24,20 +24,21 @@ def to_image(
     cimage = cv2.imencode(ext=encode_format, img=image, params=params)
     return Image(data=cimage[1].tobytes())
 
-
-
 channel = Channel("amqp://guest:guest@localhost:5672")
 
 subscription = Subscription(channel)
 subscription.subscribe(topic="usb-camera")
 
-# Blocks forever waiting for one message from any subscription
+while True:
 
-message = channel.consume()
-image = message.unpack(Image)
+    # Blocks forever waiting for one message from any subscription
+
+    message = channel.consume()
+    image = message.unpack(Image)
+
+    img_data = to_np(image)
 
 
-img_data = to_np(image)
+    cv2.imshow('janela', img_data)
 
-
-cv2.imshow('janela', img_data)
+    cv2.waitKey(1)
