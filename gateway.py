@@ -36,6 +36,7 @@ class USBCameraGateway(object):
             return
     
         self.frame = to_image(frame)
+    
 
         message = Message()
         message.content_type = ContentType.PROTOBUF
