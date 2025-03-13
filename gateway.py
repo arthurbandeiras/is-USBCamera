@@ -1,7 +1,20 @@
 from is_wire.core import Channel, Subscription, ContentType, Message
+from is_msgs.image_pb2 import Image, ColorSpace, ColorSpaces, ImageFormat, ImageFormats, Resolution
 import cv2
-import image_pb2 #arquivo gerado pelo protoc
 
+def to_image(
+    image,
+    encode_format: str = ".jpeg",
+    compression_level: float = 0.8,
+):
+    if encode_format == ".jpeg":
+        params = [cv2.IMWRITE_JPEG_QUALITY, int(compression_level * (100 - 0) + 0)]
+    elif encode_format == ".png":
+        params = [cv2.IMWRITE_PNG_COMPRESSION, int(compression_level * (9 - 0) + 0)]
+    else:
+        return Image()
+    cimage = cv2.imencode(ext=encode_format, img=image, params=params)
+    return Image(data=cimage[1].tobytes())
 
 class USBCameraGateway(object):
       
@@ -9,6 +22,7 @@ class USBCameraGateway(object):
             
         self.broker_uri = broker_uri
         self.camera = cv2.VideoCapture(camera_idx)
+        self._compression_level = 0.8
 
 
     def run(self) -> None:
@@ -21,70 +35,12 @@ class USBCameraGateway(object):
             print("Erro ao capturar imagem")
             return
     
-        ok, encoded_image = cv2.imencode('.jpg', frame)
-        if not ok:
-            print("Erro ao codificar imagem")
-            return
-        
-        #acho que tem que trocar isso aqui
-        #Procure por "driver"
-        '''
-        message = Message()
-        message.pack(self.driver.to_image(image))
-        '''
-        image_msg = image_pb2.ImageMessaege()
-        image_msg.image_data = encoded_image.tobytes()
-        image_msg.format = 'jpeg'
+        self.frame = to_image(frame)
 
         message = Message()
         message.content_type = ContentType.PROTOBUF
-        message.content = image_msg.SerializeToString()
-
-        channel.publish(message)
-
+        message.pack(self.frame)
     
+        channel.publish(message, topic='usb-camera')
 
-
-
-
-
-
-"""def run(self) -> None:
-        service_name = "CameraGateway"
-        time.sleep(2) #tirar(?)
-        publish_channel = Channel(self.broker_uri)
-        rpc_channel = Channel(self.broker_uri)
-
-        server = ServiceProvider(channel=rpc_channel)
-        #logging = LogInterceptor()
-        #tracing = TracingInterceptor(exporter=exporter)
-        #server.add_interceptor(interceptor=logging)
-        #server.add_interceptor(interceptor=tracing)
-
-        self.driver.start_capture() #start na thread
-        
-        while True:
-            image = self.driver.grab_image() #trocar para o cv2.seilaoq
-			'''se quiser, pode até manter a situação de tracing da publicação,
-			mas, tem que aprender a usar'''
-            message = Message()
-            message.pack(self.driver.to_image(image))
-            message.topic = "{}.{}.Frame".format(service_name, self.id)
-
-            if len(image.data) > 0:
-                publish_channel.publish(message=message)
-                self.logger.info("Published image") 
-            else:
-                self.logger.warn("No image captured.")
-            try:
-                message = rpc_channel.consume(timeout=0)
-                if server.should_serve(message):
-                    server.serve(message)
-            except socket.timeout:
-                pass
-
-
-def start_capture(self):
-	self.-stopped = False
-    selfself._thread = Thread(target=self._update, daemon=True)
-	self._thread.start()"""
+        print('publicando')
