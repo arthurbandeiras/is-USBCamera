@@ -3,7 +3,10 @@ from is_msgs.image_pb2 import Image
 import cv2
 import numpy as np
 from google.protobuf.message import DecodeError
+import time
 
+fps = 20
+frameTime = 1/fps
 
 def to_np(image):
     buffer = np.frombuffer(image.data, dtype=np.uint8)
@@ -29,16 +32,28 @@ channel = Channel("amqp://guest:guest@localhost:5672")
 subscription = Subscription(channel)
 subscription.subscribe(topic="usb-camera")
 
+prevTime = time.time()
+target = frameTime + prevTime
+
 while True:
+    now = time.time()
+    while now < target:
+        now = time.time()
 
-    # Blocks forever waiting for one message from any subscription
-
+    target += frameTime
+    
     message = channel.consume()
     image = message.unpack(Image)
 
     img_data = to_np(image)
 
-
     cv2.imshow('janela', img_data)
+
+    elapsedTime = now - prevTime
+    prevTime = now
+
+    realFPS = 1 / elapsedTime
+
+    print(f'T: {elapsedTime} | FPS: {realFPS}')
 
     cv2.waitKey(1)
