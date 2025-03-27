@@ -26,12 +26,13 @@ class USBCameraGateway(object):
             
         self.broker_uri = broker_uri
         self.camera = cv2.VideoCapture(camera_idx)
-        self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
-        self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
-        self.camera.set(cv2.CAP_PROP_FPS, 30)
+        self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 1280)
+        self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 720)
+        self.camera.set(cv2.CAP_PROP_FPS, 20)
+        self.camera.set(cv2.CAP_PROP_FOCUS, 255)
 
         self._compression_level = 0.8
-        self.fps = 60
+        self.fps = 20
         self.frameTime = 1/self.fps
         self.channel = Channel(self.broker_uri)
         self.subscription = Subscription(self.channel)
