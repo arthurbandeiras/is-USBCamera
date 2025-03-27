@@ -1,6 +1,0 @@
-a) compilar o .proto
-
-> protoc --python_out=. image.proto
-
-b) trocar a compressão da imagem
-c) trocar a broker_uri
