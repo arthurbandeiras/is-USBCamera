@@ -27,20 +27,13 @@ def to_image(
     cimage = cv2.imencode(ext=encode_format, img=image, params=params)
     return Image(data=cimage[1].tobytes())
 
-channel = Channel("amqp://guest:guest@localhost:5672")
+channel = Channel("amqp://10.20.5.3:30000")
 
 subscription = Subscription(channel)
 subscription.subscribe(topic="usb-camera")
 
-prevTime = time.time()
-target = frameTime + prevTime
 
 while True:
-    now = time.time()
-    while now < target:
-        now = time.time()
-
-    target += frameTime
     
     message = channel.consume()
     image = message.unpack(Image)
@@ -48,12 +41,4 @@ while True:
     img_data = to_np(image)
 
     cv2.imshow('janela', img_data)
-
-    elapsedTime = now - prevTime
-    prevTime = now
-
-    realFPS = 1 / elapsedTime
-
-    print(f'T: {elapsedTime} | FPS: {realFPS}')
-
     cv2.waitKey(1)

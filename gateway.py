@@ -1,6 +1,7 @@
 from is_wire.core import Channel, Subscription, ContentType, Message
 from is_msgs.image_pb2 import Image, ColorSpace, ColorSpaces, ImageFormat, ImageFormats, Resolution
 import cv2
+import time
 
 def to_image(
     image,
@@ -16,19 +17,35 @@ def to_image(
     cimage = cv2.imencode(ext=encode_format, img=image, params=params)
     return Image(data=cimage[1].tobytes())
 
+
+
+
 class USBCameraGateway(object):
       
     def __init__(self, broker_uri, camera_idx):
             
         self.broker_uri = broker_uri
         self.camera = cv2.VideoCapture(camera_idx)
+        self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+        self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+        self.camera.set(cv2.CAP_PROP_FPS, 30)
+
         self._compression_level = 0.8
+        self.fps = 60
+        self.frameTime = 1/self.fps
+        self.channel = Channel(self.broker_uri)
+        self.subscription = Subscription(self.channel)
 
 
     def run(self) -> None:
-        
-        channel = Channel(self.broker_uri)
-        subscription = Subscription(channel)
+        # prevTime = time.time()
+        # target = self.frameTime + prevTime
+
+        now = time.time()
+        # while now < target:
+        #     now = time.time()
+
+        # target += self.frameTime
 
         ret, frame = self.camera.read()
         if not ret:
@@ -42,6 +59,13 @@ class USBCameraGateway(object):
         message.content_type = ContentType.PROTOBUF
         message.pack(self.frame)
     
-        channel.publish(message, topic='usb-camera')
+        self.channel.publish(message, topic='CameraGateway.20.Frame')
+
+        elapsedTime = now - time.time() # prevTime
+        # prevTime = now
+
+        realFPS = 1 / elapsedTime
+
+        print(f'T: {elapsedTime} | FPS:  {realFPS}')
 
         print('publicando')

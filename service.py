@@ -2,7 +2,7 @@ from gateway import USBCameraGateway
 
 def main():
     gateway = USBCameraGateway(
-        broker_uri='amqp://guest:guest@localhost:5672',
+        broker_uri='amqp://10.20.5.3:30000',
         camera_idx=0,
     )
     while True:
