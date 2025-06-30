@@ -1,13 +1,15 @@
-from gateway import USBCameraGateway		
+from gateway import USBCameraGateway
+import time
 
 def main():
     gateway = USBCameraGateway(
         broker_uri='amqp://10.20.5.3:30000',
-        camera_idx=0,
+        device='/dev/video1',
+        resolution=(1280, 720),
+        fps=20
     )
     while True:
-        gateway.run()
-# v4l2-ctl --device=/dev/video0 --list-formats-ext
+        time.sleep(1)
 
 if __name__ == "__main__":
     main()
