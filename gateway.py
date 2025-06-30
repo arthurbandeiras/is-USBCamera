@@ -1,69 +1,88 @@
-import cv2
+import av
 import time
 import threading
 import queue
+import numpy as np
+import cv2
 
-from is_wire.core import Channel, Subscription, ContentType, Message
+from is_wire.core import Channel, Subscription, Message, ContentType
 from is_msgs.image_pb2 import Image
 
-
-def to_image(
-    image,
-    encode_format: str = ".jpeg",
-    compression_level: float = 0.8,
-):
+def to_image(image, encode_format: str = ".jpeg", compression_level: float = 0.8):
     if encode_format == ".jpeg":
         params = [cv2.IMWRITE_JPEG_QUALITY, int(compression_level * 100)]
     elif encode_format == ".png":
         params = [cv2.IMWRITE_PNG_COMPRESSION, int(compression_level * 9)]
     else:
         return Image()
-    cimage = cv2.imencode(ext=encode_format, img=image, params=params)
-    return Image(data=cimage[1].tobytes())
-
+    result, buffer = cv2.imencode(encode_format, image, params)
+    if result:
+        return Image(data=buffer.tobytes())
+    else:
+        return Image()
 
 class USBCameraGateway:
-    def __init__(self, broker_uri, camera_idx):
+    def __init__(self, broker_uri, device="/dev/video1", resolution=(1920, 1080), fps=20):
         self.broker_uri = broker_uri
-        self.camera = cv2.VideoCapture(camera_idx)
+        self.device = device
+        self.resolution = resolution
+        self.target_fps = fps
+        self.frame_interval = 1.0 / self.target_fps
 
-        # Configurar resolução e MJPEG diretamente
-        self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
-        self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
-        self.camera.set(cv2.CAP_PROP_FPS, 30)
-        self.camera.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
-
-        self._compression_level = 0.8
         self.channel = Channel(self.broker_uri)
         self.subscription = Subscription(self.channel)
 
-        # Buffer de frames e thread de captura
-        self.frame_queue = queue.Queue(maxsize=2)
-        self.capture_thread = threading.Thread(target=self._capture_loop, daemon=True)
-        self.capture_thread.start()
+        self.frame_queue = queue.Queue(maxsize=3)
+
+        # Threads
+        threading.Thread(target=self._capture_loop, daemon=True).start()
+        threading.Thread(target=self._publisher_loop, daemon=True).start()
 
     def _capture_loop(self):
-        while True:
-            ret, frame = self.camera.read()
-            if ret and not self.frame_queue.full():
-                self.frame_queue.put(frame)
+        print("[INFO] Iniciando captura com PyAV...")
+        container = av.open(
+            self.device,
+            format="v4l2",
+            options={
+                "framerate": str(self.target_fps),
+                "video_size": f"{self.resolution[0]}x{self.resolution[1]}",
+                "pixel_format": "mjpeg"
+            },
+        )
 
-    def run(self):
+        for frame in container.decode(video=0):
+            # Converter para ndarray (formato OpenCV: H x W x 3)
+            img = frame.to_ndarray(format="bgr24")
+            try:
+                self.frame_queue.put(img, timeout=0.01)
+            except queue.Full:
+                pass
+
+    def _publisher_loop(self):
+        count = 0
         start_time = time.time()
 
-        if self.frame_queue.empty():
-            return
+        while True:
+            try:
+                frame = self.frame_queue.get(timeout=0.01)
 
-        frame = self.frame_queue.get()
+                # Codificar e empacotar
+                img_msg = to_image(frame, ".jpeg", 0.9)
+                msg = Message(content_type=ContentType.PROTOBUF)
+                msg.pack(img_msg)
 
-        # Compressão JPEG e empacotamento
-        img_msg = to_image(frame, ".jpeg", self._compression_level)
-        msg = Message(content_type=ContentType.PROTOBUF)
-        msg.pack(img_msg)
+                self.channel.publish(msg, topic="CameraGateway.20.Frame")
+                count += 1
 
-        # Publicação
-        self.channel.publish(msg, topic="CameraGateway.20.Frame")
+                # Limitar FPS
+                #time.sleep(self.frame_interval)
 
-        elapsed = time.time() - start_time
-        fps = 1 / elapsed if elapsed > 0 else 0
-        print(f"[INFO] Tempo: {elapsed:.3f}s | FPS real: {fps:.2f}")
+                # Log de FPS
+                if time.time() - start_time >= 1.0:
+                    print(f"[BROKER] {count} fps publicado")
+                    print(frame.shape)
+                    count = 0
+                    start_time = time.time()
+
+            except queue.Empty:
+                continue
