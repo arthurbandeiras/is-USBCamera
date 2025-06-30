@@ -1,7 +1,11 @@
-from is_wire.core import Channel, Subscription, ContentType, Message
-from is_msgs.image_pb2 import Image, ColorSpace, ColorSpaces, ImageFormat, ImageFormats, Resolution
 import cv2
 import time
+import threading
+import queue
+
+from is_wire.core import Channel, Subscription, ContentType, Message
+from is_msgs.image_pb2 import Image
+
 
 def to_image(
     image,
@@ -9,64 +13,57 @@ def to_image(
     compression_level: float = 0.8,
 ):
     if encode_format == ".jpeg":
-        params = [cv2.IMWRITE_JPEG_QUALITY, int(compression_level * (100 - 0) + 0)]
+        params = [cv2.IMWRITE_JPEG_QUALITY, int(compression_level * 100)]
     elif encode_format == ".png":
-        params = [cv2.IMWRITE_PNG_COMPRESSION, int(compression_level * (9 - 0) + 0)]
+        params = [cv2.IMWRITE_PNG_COMPRESSION, int(compression_level * 9)]
     else:
         return Image()
     cimage = cv2.imencode(ext=encode_format, img=image, params=params)
     return Image(data=cimage[1].tobytes())
 
 
-
-
-class USBCameraGateway(object):
-      
+class USBCameraGateway:
     def __init__(self, broker_uri, camera_idx):
-            
         self.broker_uri = broker_uri
         self.camera = cv2.VideoCapture(camera_idx)
-        self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 1280)
-        self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 720)
-        self.camera.set(cv2.CAP_PROP_FPS, 20)
-        self.camera.set(cv2.CAP_PROP_FOCUS, 255)
+
+        # Configurar resolução e MJPEG diretamente
+        self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+        self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+        self.camera.set(cv2.CAP_PROP_FPS, 30)
+        self.camera.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
 
         self._compression_level = 0.8
-        self.fps = 20
-        self.frameTime = 1/self.fps
         self.channel = Channel(self.broker_uri)
         self.subscription = Subscription(self.channel)
 
+        # Buffer de frames e thread de captura
+        self.frame_queue = queue.Queue(maxsize=2)
+        self.capture_thread = threading.Thread(target=self._capture_loop, daemon=True)
+        self.capture_thread.start()
 
-    def run(self) -> None:
-        # prevTime = time.time()
-        # target = self.frameTime + prevTime
+    def _capture_loop(self):
+        while True:
+            ret, frame = self.camera.read()
+            if ret and not self.frame_queue.full():
+                self.frame_queue.put(frame)
 
-        now = time.time()
-        # while now < target:
-        #     now = time.time()
+    def run(self):
+        start_time = time.time()
 
-        # target += self.frameTime
-
-        ret, frame = self.camera.read()
-        if not ret:
-            print("Erro ao capturar imagem")
+        if self.frame_queue.empty():
             return
-    
-        self.frame = to_image(frame)
-    
 
-        message = Message()
-        message.content_type = ContentType.PROTOBUF
-        message.pack(self.frame)
-    
-        self.channel.publish(message, topic='CameraGateway.20.Frame')
+        frame = self.frame_queue.get()
 
-        elapsedTime = now - time.time() # prevTime
-        # prevTime = now
+        # Compressão JPEG e empacotamento
+        img_msg = to_image(frame, ".jpeg", self._compression_level)
+        msg = Message(content_type=ContentType.PROTOBUF)
+        msg.pack(img_msg)
 
-        realFPS = 1 / elapsedTime
+        # Publicação
+        self.channel.publish(msg, topic="CameraGateway.20.Frame")
 
-        print(f'T: {elapsedTime} | FPS:  {realFPS}')
-
-        print('publicando')
+        elapsed = time.time() - start_time
+        fps = 1 / elapsed if elapsed > 0 else 0
+        print(f"[INFO] Tempo: {elapsed:.3f}s | FPS real: {fps:.2f}")
