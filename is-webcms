@@ -1,0 +1,28 @@
+>> Para travar a regulação automática de framerate
+
+# 1 = Manual Mode
+v4l2-ctl -d /dev/video0 --set-ctrl=auto_exposure=1
+
+# valor típico: 250 (ajuste conforme necessário)
+v4l2-ctl -d /dev/video0 --set-ctrl=exposure_time_absolute=250
+
+# listar para verificar as alterações
+v4l2-ctl -d /dev/video0 --list-ctrls
+
+
+>> Para set dos valores de trabalho da camera
+
+v4l2-ctl -d /dev/video0 --set-fmt-video=width=1280,height=720,pixelformat=MJPG  #resolução
+v4l2-ctl -d /dev/video0 --set-parm=10						#fps
+
+
+
+>> para set da câmera virtual
+
+
+sudo rmmod v4l2loopback
+sudo modprobe v4l2loopback devices=1 video_nr=10 card_label="LoopbackCam" exclusive_caps=1 max_buffers=10 sustain_framerate=1
+ffmpeg -f v4l2 -input_format mjpeg -framerate 30 -video_size 1920x1080 -i /dev/video0 -f v4l2 -pix_fmt yuyv422 /dev/video10
+
+
+>> depois, rodar testGateway.py

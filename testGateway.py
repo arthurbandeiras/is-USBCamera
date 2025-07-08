@@ -1,0 +1,102 @@
+import av
+import time
+import threading
+import queue
+
+from is_wire.core import Channel, Message, ContentType
+from is_msgs.image_pb2 import Image
+
+
+class MJPEGCameraPublisher:
+    def __init__(self, broker_uri, device="/dev/video10", fps=10, resolution="1920x1080"):
+        self.broker_uri = broker_uri
+        self.device = device
+        self.target_fps = fps
+        self.frame_queue = queue.Queue(maxsize=1)
+        self.running = True
+
+        '''# MJPEG + resolução e FPS fixos
+        self.container = av.open(
+            self.device,
+            format="v4l2",
+            options={
+                "input_format": "mjpeg",
+                "video_size": resolution,
+                "framerate": str(fps)
+            }
+        )'''
+
+        self.container = av.open(
+            self.device, 
+            format="v4l2", 
+            options={
+                "video_size": resolution
+            }
+        )
+
+        self.stream = self.container.streams.video[0]
+        self.stream.thread_type = "AUTO"
+
+        self.channel = Channel(self.broker_uri)
+
+    def capture_loop(self):
+        interval = 1.0 / self.target_fps  # Intervalo alvo (0.1s para 10 FPS)
+        next_frame_time = time.perf_counter()
+
+        for packet in self.container.demux(self.stream):
+            if not self.running:
+                break
+            if packet.dts is None:
+                continue
+
+            try:
+                now = time.perf_counter()
+                if now >= next_frame_time:
+                    jpeg_bytes = bytes(packet)
+                    img_msg = Image(data=jpeg_bytes)
+
+                    if self.frame_queue.full():
+                        self.frame_queue.get_nowait()
+                    self.frame_queue.put_nowait(img_msg)
+
+                    next_frame_time += interval
+
+                    # Corrige possível acúmulo de atraso
+                    if now > next_frame_time + interval:
+                        next_frame_time = now + interval
+            except Exception as e:
+                print("Erro na captura:", e)
+
+        print("⚠️ Loop de captura finalizado.")
+
+    def publish_loop(self):
+        while self.running:
+            try:
+                img_msg = self.frame_queue.get(timeout=1)
+                msg = Message(content_type=ContentType.PROTOBUF)
+                msg.pack(img_msg)
+                self.channel.publish(msg, topic="CameraGateway.20.Frame")
+            except queue.Empty:
+                continue
+
+    def run(self):
+        t1 = threading.Thread(target=self.capture_loop, daemon=True)
+        t2 = threading.Thread(target=self.publish_loop, daemon=True)
+        t1.start()
+        t2.start()
+
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            print("Encerrando...")
+            self.running = False
+            t1.join()
+            t2.join()
+            self.container.close()
+            print("Finalizado.")
+
+
+if __name__ == "__main__":
+    gateway = MJPEGCameraPublisher(broker_uri="amqp://10.20.5.3:30000", fps=10, resolution="1920x1080")
+    gateway.run()
