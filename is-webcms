@@ -33,6 +33,13 @@ v4l2-ctl --list-devices
 sudo rmmod v4l2loopback
 sudo modprobe v4l2loopback devices=1 video_nr=10 card_label="LoopbackCam" exclusive_caps=1 max_buffers=10 sustain_framerate=1
 ffmpeg -f v4l2 -input_format mjpeg -framerate 30 -video_size 1920x1080 -i /dev/video0 -f v4l2 -pix_fmt yuyv422 /dev/video10
+=-=-=-=-=-=--
+trocado por:
+
+sudo modprobe -r v4l2loopback
+sudo modprobe v4l2loopback video_nr=17 card_label="LoopbackCam" exclusive_caps=1 max_buffers=3 latency=0
+ffmpeg -f v4l2 -input_format mjpeg -framerate 30 -video_size 1920x1080 -i /dev/video0 -c:v copy -f v4l2 /dev/video17
+
 
 
 >> depois, rodar testGateway.py
