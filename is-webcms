@@ -9,15 +9,25 @@ v4l2-ctl -d /dev/video0 --set-ctrl=exposure_time_absolute=250
 # listar para verificar as alterações
 v4l2-ctl -d /dev/video0 --list-ctrls
 
-
 >> Para set dos valores de trabalho da camera
 
-v4l2-ctl -d /dev/video0 --set-fmt-video=width=1280,height=720,pixelformat=MJPG  #resolução
-v4l2-ctl -d /dev/video0 --set-parm=10						#fps
+v4l2-ctl -d /dev/video0 --set-fmt-video=width=1920,height=1080,pixelformat=MJPG  #resolução
+v4l2-ctl -d /dev/video0 --set-parm=30						#fps
 
 
 
 >> para set da câmera virtual
+
+sudo modprobe -r v4l2loopback || true
+sudo apt update
+sudo apt install -y raspberrypi-kernel-headers build-essential git dkms ffmpeg v4l-utils
+rm -rf ~/v4l2loopback
+git clone https://github.com/umlaeute/v4l2loopback.git ~/v4l2loopback
+cd ~/v4l2loopback
+sudo modprobe v4l2loopback devices=1 video_nr=10 card_label="LoopbackCam" exclusive_caps=1 max_buffers=2 mode=0
+
+v4l2-ctl --list-devices
+# procure o dispositivo atrelado ao loopback ex.: /dev/video10
 
 
 sudo rmmod v4l2loopback
