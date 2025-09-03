@@ -1,0 +1,7 @@
+{
+    "broker_uri": "amqp://10.20.5.3:30000",
+    "device": "/dev/video17",
+    "framerate": 15,
+    "resolution": "1920x1080",
+    "camera_id": "20"
+}

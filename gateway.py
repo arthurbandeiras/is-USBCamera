@@ -8,12 +8,13 @@ from is_msgs.image_pb2 import Image
 
 
 class USBCameraPublisher:
-    def __init__(self, broker_uri, device="/dev/video17", fps=15, resolution="1920x1080"):
+    def __init__(self, broker_uri, device="/dev/video17", fps=15, resolution="1920x1080", id="20"):
         self.broker_uri = broker_uri
         self.device = device
         self.target_fps = fps
         self.frame_queue = queue.Queue(maxsize=1)
         self.running = True
+        self.id = id
 
         # MJPEG direto (sem decodificar)
         self.container = av.open(
@@ -63,7 +64,7 @@ class USBCameraPublisher:
                 img_msg = Image(data=jpeg_bytes)
                 msg = Message(content_type=ContentType.PROTOBUF)
                 msg.pack(img_msg)
-                self.channel.publish(msg, topic="CameraGateway.20.Frame")
+                self.channel.publish(msg, topic=f"CameraGateway.{self.id}.Frame")
             except queue.Empty:
                 continue
 

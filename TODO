@@ -1,9 +1,14 @@
 1) 
 docker build -t camera-service .
 
+ou
+
+docker build -t [docker_user]/is-usbcamera --platform linux/arm64 .
 
 2)
 docker run --rm -it \
    --device=/dev/video0:/dev/video0 \
    --device=/dev/video17:/dev/video17 \
    camera-service
+
+>> utilizar o do README.md

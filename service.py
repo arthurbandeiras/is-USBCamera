@@ -1,11 +1,16 @@
 from gateway import USBCameraPublisher		
+import json
 
 def main():
+    
+    options = json.load(open('./options.json', 'r'))
+
     gateway = USBCameraPublisher(
-        broker_uri="amqp://10.20.5.3:30000",
-        device="/dev/video17",
-        fps=15,
-        resolution="1920x1080"
+        broker_uri=options["broker_uri"],
+        device=options["device"],
+        fps=options["framerate"],
+        resolution=options["resolution"],
+        id=options["camera_id"]
     )
     gateway.run()
 
