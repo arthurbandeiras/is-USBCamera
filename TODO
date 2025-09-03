@@ -1,0 +1,9 @@
+1) 
+docker build -t camera-service .
+
+
+2)
+docker run --rm -it \
+   --device=/dev/video0:/dev/video0 \
+   --device=/dev/video17:/dev/video17 \
+   camera-service

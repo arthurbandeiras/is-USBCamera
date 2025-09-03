@@ -1,12 +1,16 @@
-from gateway import USBCameraGateway		
+from gateway import USBCameraPublisher		
 
 def main():
-    gateway = USBCameraGateway(
-        broker_uri='amqp://10.20.5.3:30000',
-        camera_idx=0,
+    gateway = USBCameraPublisher(
+        broker_uri="amqp://10.20.5.3:30000",
+        device="/dev/video17",
+        fps=15,
+        resolution="1920x1080"
     )
-    while True:
-        gateway.run()
+    gateway.run()
+
 
 if __name__ == "__main__":
     main()
+
+    

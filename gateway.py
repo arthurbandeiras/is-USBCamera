@@ -1,72 +1,86 @@
-from is_wire.core import Channel, Subscription, ContentType, Message
-from is_msgs.image_pb2 import Image, ColorSpace, ColorSpaces, ImageFormat, ImageFormats, Resolution
-import cv2
+import av
 import time
+import threading
+import queue
 
-def to_image(
-    image,
-    encode_format: str = ".jpeg",
-    compression_level: float = 0.8,
-):
-    if encode_format == ".jpeg":
-        params = [cv2.IMWRITE_JPEG_QUALITY, int(compression_level * (100 - 0) + 0)]
-    elif encode_format == ".png":
-        params = [cv2.IMWRITE_PNG_COMPRESSION, int(compression_level * (9 - 0) + 0)]
-    else:
-        return Image()
-    cimage = cv2.imencode(ext=encode_format, img=image, params=params)
-    return Image(data=cimage[1].tobytes())
+from is_wire.core import Channel, Message, ContentType
+from is_msgs.image_pb2 import Image
 
 
-
-
-class USBCameraGateway(object):
-      
-    def __init__(self, broker_uri, camera_idx):
-            
+class USBCameraPublisher:
+    def __init__(self, broker_uri, device="/dev/video17", fps=15, resolution="1920x1080"):
         self.broker_uri = broker_uri
-        self.camera = cv2.VideoCapture(camera_idx)
-        self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 1280)
-        self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 720)
-        self.camera.set(cv2.CAP_PROP_FPS, 20)
-        self.camera.set(cv2.CAP_PROP_FOCUS, 255)
+        self.device = device
+        self.target_fps = fps
+        self.frame_queue = queue.Queue(maxsize=1)
+        self.running = True
 
-        self._compression_level = 0.8
-        self.fps = 20
-        self.frameTime = 1/self.fps
+        # MJPEG direto (sem decodificar)
+        self.container = av.open(
+            self.device,
+            format="v4l2",
+            options={
+                "input_format": "mjpeg",
+                "video_size": resolution,
+                "framerate": str(fps)
+            }
+        )
+
+        self.stream = self.container.streams.video[0]
         self.channel = Channel(self.broker_uri)
-        self.subscription = Subscription(self.channel)
 
+    def capture_loop(self):
+        interval = 1.0 / self.target_fps
+        next_frame_time = time.perf_counter()
 
-    def run(self) -> None:
-        # prevTime = time.time()
-        # target = self.frameTime + prevTime
+        for packet in self.container.demux(self.stream):
+            if not self.running:
+                break
+            if packet.dts is None:
+                continue
 
-        now = time.time()
-        # while now < target:
-        #     now = time.time()
+            now = time.perf_counter()
+            if now >= next_frame_time:
+                try:
+                    jpeg_bytes = bytes(packet)
 
-        # target += self.frameTime
+                    if self.frame_queue.full():
+                        self.frame_queue.get_nowait()
+                    self.frame_queue.put_nowait(jpeg_bytes)
 
-        ret, frame = self.camera.read()
-        if not ret:
-            print("Erro ao capturar imagem")
-            return
-    
-        self.frame = to_image(frame)
-    
+                    next_frame_time += interval
+                    if now > next_frame_time + interval:
+                        next_frame_time = now + interval
+                except Exception as e:
+                    print("Erro na captura:", e)
 
-        message = Message()
-        message.content_type = ContentType.PROTOBUF
-        message.pack(self.frame)
-    
-        self.channel.publish(message, topic='CameraGateway.20.Frame')
+        print("⚠️ Loop de captura finalizado.")
 
-        elapsedTime = now - time.time() # prevTime
-        # prevTime = now
+    def publish_loop(self):
+        while self.running:
+            try:
+                jpeg_bytes = self.frame_queue.get(timeout=1)
+                img_msg = Image(data=jpeg_bytes)
+                msg = Message(content_type=ContentType.PROTOBUF)
+                msg.pack(img_msg)
+                self.channel.publish(msg, topic="CameraGateway.20.Frame")
+            except queue.Empty:
+                continue
 
-        realFPS = 1 / elapsedTime
+    def run(self):
+        t1 = threading.Thread(target=self.capture_loop, daemon=True)
+        t2 = threading.Thread(target=self.publish_loop, daemon=True)
+        t1.start()
+        t2.start()
 
-        print(f'T: {elapsedTime} | FPS:  {realFPS}')
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            print("Encerrando...")
+            self.running = False
+            t1.join()
+            t2.join()
+            self.container.close()
+            print("Finalizado.")
 
-        print('publicando')
