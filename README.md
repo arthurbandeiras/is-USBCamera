@@ -1,5 +1,16 @@
 # is-USBCamera
 
+Para configurar biblioteca V4L2
+
+```
+sudo apt update
+sudo apt install -y build-essential raspberrypi-kernel-headers dkms git
+git clone https://github.com/umlaeute/v4l2loopback.git
+cd v4l2loopback
+sudo make && sudo make install
+sudo depmod -a
+```
+
 Para settar a câmera "virtual" no host:
 ```
 sudo modprobe v4l2loopback video_nr=17 card_label="VirtualCam" exclusive_caps=1
