@@ -1,6 +1,6 @@
 # is-USBCamera
 
-##Raspberry Pi OS
+## Raspberry Pi OS
 
 ```
 sudo apt update
@@ -12,7 +12,7 @@ sudo depmod -a
 sudo modprobe v4l2loopback video_nr=17 card_label="VirtualCam" exclusive_caps=1
 ```
 
-##Ubuntu Server 22.04
+## Ubuntu Server 22.04
 ```
 sudo apt update
 sudo apt install -y build-essential dkms git linux-headers-raspi
