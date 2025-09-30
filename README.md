@@ -1,6 +1,6 @@
 # is-USBCamera
 
-Para configurar biblioteca V4L2
+##Raspberry Pi OS
 
 ```
 sudo apt update
@@ -9,10 +9,19 @@ git clone https://github.com/umlaeute/v4l2loopback.git
 cd v4l2loopback
 sudo make && sudo make install
 sudo depmod -a
+sudo modprobe v4l2loopback video_nr=17 card_label="VirtualCam" exclusive_caps=1
 ```
 
-Para settar a câmera "virtual" no host:
+##Ubuntu Server 22.04
 ```
+sudo apt update
+sudo apt install -y build-essential dkms git linux-headers-raspi
+git clone https://github.com/umlaeute/v4l2loopback.git
+cd v4l2loopback
+sudo make
+sudo make install
+sudo depmod -a
+cd ..
 sudo modprobe v4l2loopback video_nr=17 card_label="VirtualCam" exclusive_caps=1
 ```
 
