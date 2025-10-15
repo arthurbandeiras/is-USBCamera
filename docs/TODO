@@ -1,0 +1,10 @@
+1) docker build -t camera-service .
+
+ou
+
+docker build -t [docker_user]/is-usbcamera --platform linux/arm64 .
+
+
+# === 2. Reinicia o módulo v4l2loopback com parâmetros fixos ===
+sudo modprobe -r v4l2loopback
+sudo modprobe v4l2loopback video_nr=17 card_label="LoopbackCam" exclusive_caps=1 max_buffers=3 latency=0

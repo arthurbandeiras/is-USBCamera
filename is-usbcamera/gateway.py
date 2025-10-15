@@ -1,10 +1,10 @@
-import av
-import time
-import threading
 import queue
+import threading
+import time
 
-from is_wire.core import Channel, Message, ContentType
+import av
 from is_msgs.image_pb2 import Image
+from is_wire.core import Channel, ContentType, Message
 
 
 class USBCameraPublisher:
@@ -16,15 +16,10 @@ class USBCameraPublisher:
         self.running = True
         self.id = id
 
-        # MJPEG direto (sem decodificar)
         self.container = av.open(
             self.device,
             format="v4l2",
-            options={
-                "input_format": "mjpeg",
-                "video_size": resolution,
-                "framerate": str(fps)
-            }
+            options={"input_format": "mjpeg", "video_size": resolution, "framerate": str(fps)},
         )
 
         self.stream = self.container.streams.video[0]
@@ -84,4 +79,3 @@ class USBCameraPublisher:
             t2.join()
             self.container.close()
             print("Finalizado.")
-
