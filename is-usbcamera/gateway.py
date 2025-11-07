@@ -8,7 +8,9 @@ from is_wire.core import Channel, ContentType, Message
 
 
 class USBCameraPublisher:
-    def __init__(self, broker_uri, device="/dev/video17", fps=15, resolution="1920x1080", id="20"):
+    def __init__(
+        self, broker_uri, device="/dev/video17", fps=15, resolution="1920x1080", id="20"
+    ):
         self.broker_uri = broker_uri
         self.device = device
         self.target_fps = fps
@@ -19,7 +21,11 @@ class USBCameraPublisher:
         self.container = av.open(
             self.device,
             format="v4l2",
-            options={"input_format": "mjpeg", "video_size": resolution, "framerate": str(fps)},
+            options={
+                "input_format": "mjpeg",
+                "video_size": resolution,
+                "framerate": str(fps),
+            },
         )
 
         self.stream = self.container.streams.video[0]
