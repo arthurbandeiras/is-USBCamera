@@ -21,4 +21,4 @@ COPY . .
 
 RUN chmod +x startup_camera.sh
 
-CMD ["bash", "-c", "./startup_camera.sh & python3 is-usbcamera/service.py"]
+CMD ["./startup_camera.sh"]
