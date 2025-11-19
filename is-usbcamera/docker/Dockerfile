@@ -17,7 +17,11 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
-COPY . .
+# O Dockerfile deve ser executado do diretório raiz do projeto (is-usbcamera)
+COPY is-usbcamera/conf /app/is-usbcamera/conf
+COPY is-usbcamera/gateway.py /app/is-usbcamera/gateway.py
+COPY is-usbcamera/service.py /app/is-usbcamera/service.py
+COPY is-usbcamera/startup_camera.sh .
 
 RUN chmod +x startup_camera.sh
 

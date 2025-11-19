@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: options-configmap
+  labels:
+    app: is-usbcamera
+data:
+  options_1: |-
+    {
+      "broker_uri": "amqp://10.20.5.2:30000",
+      "device": "/dev/video17",
+      "framerate": 15,
+      "resolution": "1920x1080",
+      "camera_id": "21"
+    }
+  options_2: |-
+    {
+      "broker_uri": "amqp://10.20.5.2:30000",
+      "device": "/dev/video17",
+      "framerate": 15,
+      "resolution": "1920x1080",
+      "camera_id": "22"
+    }
+  options_3: |-
+    {
+      "broker_uri": "amqp://10.20.5.2:30000",
+      "device": "/dev/video17",
+      "framerate": 15,
+      "resolution": "1920x1080",
+      "camera_id": "23"
+    }
+  options_4: |-
+    {
+      "broker_uri": "amqp://10.20.5.2:30000",
+      "device": "/dev/video17",
+      "framerate": 15,
+      "resolution": "1920x1080",
+      "camera_id": "24"
+    }

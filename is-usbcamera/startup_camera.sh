@@ -27,10 +27,10 @@ v4l2-ctl -d /dev/video0 --set-ctrl=exposure_time_absolute=300
 # O processo Python agora está no foreground, e o Shell aguarda que ele termine.
 # O FFmpeg continua rodando em background (PID=$FFMPEG_PID) e alimenta o video17.
 echo "Iniciando serviço Python (USBCameraPublisher)..."
-python3 is-usbcamera/service.py
-
+python3 /app/is-usbcamera/service.py
 # --- 5. Limpeza (Só será alcançado se o serviço Python for interrompido) ---
 # Se o serviço Python for interrompido (ex: SIGINT), o shell continuará aqui.
+
 echo "Serviço Python encerrado. Finalizando FFmpeg (PID $FFMPEG_PID)..."
 kill $FFMPEG_PID
 wait $FFMPEG_PID 2>/dev/null # Aguarda a morte do processo FFmpeg

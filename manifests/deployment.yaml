@@ -1,0 +1,231 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: is-usbcamera-21
+  namespace: default
+  labels:
+    app: is-usbcamera
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: is-usbcamera
+  template:
+    metadata:
+      labels:
+        app: is-usbcamera
+    spec:
+      nodeSelector:
+        kubernetes.io/arch: arm64
+        kubernetes.io/hostname: rpcm-1
+      hostNetwork: true 
+      containers:
+      - name: usbcamera-publisher
+        image: arthurbandeira/is-usbcamera:latest
+        imagePullPolicy: Always
+        volumeMounts:
+        - name: video0-device    
+          mountPath: /dev/video0
+        - name: video17-device   
+          mountPath: /dev/video17
+        - name: config-volume    
+          mountPath: /app/is-usbcamera/conf/config.json
+          subPath: config.json
+        securityContext:      
+          privileged: true    
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "100m"
+            memory: "128Mi"          
+      volumes:
+      - name: video0-device      
+        hostPath:
+          path: /dev/video0
+          type: CharDevice
+      - name: video17-device      
+        hostPath:
+          path: /dev/video17
+          type: CharDevice
+      - name: config-volume      
+        configMap:
+          name: options-configmap
+          items:
+          - key: options_1
+            path: config.json
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: is-usbcamera-22
+  namespace: default
+  labels:
+    app: is-usbcamera
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: is-usbcamera
+  template:
+    metadata:
+      labels:
+        app: is-usbcamera
+    spec:
+      nodeSelector:
+        kubernetes.io/arch: arm64
+        kubernetes.io/hostname: rpcm-2
+      hostNetwork: true # Necessário para acesso direto à câmera USB
+      containers:
+      - name: usbcamera-publisher
+        image: arthurbandeira/is-usbcamera:latest
+        imagePullPolicy: Always
+        volumeMounts:
+        - name: video0-device    # Monta o dispositivo de vídeo real
+          mountPath: /dev/video0
+        - name: video17-device   # Monta o dispositivo de vídeo virtual
+          mountPath: /dev/video17
+        - name: config-volume    # Monta o ConfigMap
+          mountPath: /app/is-usbcamera/conf/config.json
+          subPath: config.json
+        securityContext:      #O container precisa de privilégios para
+          privileged: true    #acessar os dispositivos /dev/videoX e executar v4l2-ctl
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "100m"
+            memory: "128Mi"          
+      volumes:
+      - name: video0-device      # Volume para montar o dispositivo de vídeo real
+        hostPath:
+          path: /dev/video0
+          type: CharDevice
+      - name: video17-device     # Volume para montar o dispositivo virtual (v4l2loopback) 
+        hostPath:
+          path: /dev/video17
+          type: CharDevice
+      - name: config-volume      # Volume para montar o ConfigMap
+        configMap:
+          name: options-configmap
+          items:
+          - key: options_2
+            path: config.json
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: is-usbcamera-23
+  namespace: default
+  labels:
+    app: is-usbcamera
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: is-usbcamera
+  template:
+    metadata:
+      labels:
+        app: is-usbcamera
+    spec:
+      nodeSelector:
+        kubernetes.io/arch: arm64
+        kubernetes.io/hostname: rpcm-3
+      hostNetwork: true 
+      containers:
+      - name: usbcamera-publisher
+        image: arthurbandeira/is-usbcamera:latest
+        imagePullPolicy: Always
+        volumeMounts:
+        - name: video0-device    
+          mountPath: /dev/video0
+        - name: video17-device   
+          mountPath: /dev/video17
+        - name: config-volume    
+          mountPath: /app/is-usbcamera/conf/config.json
+          subPath: config.json
+        securityContext:     
+          privileged: true   
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "100m"
+            memory: "128Mi"          
+      volumes:
+      - name: video0-device      
+        hostPath:
+          path: /dev/video0
+          type: CharDevice
+      - name: video17-device    
+        hostPath:
+          path: /dev/video17
+          type: CharDevice
+      - name: config-volume     
+        configMap:
+          name: options-configmap
+          items:
+          - key: options_3
+            path: config.json
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: is-usbcamera-24
+  namespace: default
+  labels:
+    app: is-usbcamera
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: is-usbcamera
+  template:
+    metadata:
+      labels:
+        app: is-usbcamera
+    spec:
+      nodeSelector:
+        kubernetes.io/arch: arm64
+        kubernetes.io/hostname: rpcm-4
+      hostNetwork: true
+      containers:
+      - name: usbcamera-publisher
+        image: arthurbandeira/is-usbcamera:latest
+        imagePullPolicy: Always
+        volumeMounts:
+        - name: video0-device 
+          mountPath: /dev/video0
+        - name: video17-device 
+          mountPath: /dev/video17
+        - name: config-volume  
+          mountPath: /app/is-usbcamera/conf/config.json
+          subPath: config.json
+        securityContext:      
+          privileged: true    
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "100m"
+            memory: "128Mi"          
+      volumes:
+      - name: video0-device      
+        hostPath:
+          path: /dev/video0
+          type: CharDevice
+      - name: video17-device      
+        hostPath:
+          path: /dev/video17
+          type: CharDevice
+      - name: config-volume     
+        configMap:
+          name: options-configmap
+          items:
+          - key: options_4
+            path: config.json
